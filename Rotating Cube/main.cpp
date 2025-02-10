@@ -1,6 +1,10 @@
 #include "screen.h"
 #include <windows.h>
 #include <numeric>
+ 
+#define M_PI 3.14159265358979323846
+
+
 
 struct vec3{
 	float x,y,z;
@@ -10,25 +14,8 @@ struct connection{
 	int a,b;
 };
 
-// The first transformation modifies point.y, then immediately uses the modified value when updating point.z, leading to incorrect results.
-// Result -> cube gets smaller with is very funny
-void rotate(vec3& point, float x=1, float y=2, float z=1){
-	float rad = 0;
 
-	rad = x;
-	point.y =  std::cos(rad) * point.y - std::sin(rad) * point.z;
-	point.z =  std::sin(rad) * point.y + std::cos(rad) * point.z;
-
-	rad = y;
-	point.x =  std::cos(rad) * point.x + std::sin(rad) * point.z;
-	point.z = -std::sin(rad) * point.x + std::cos(rad) * point.z;
-
-	rad = z;
-	point.x =  std::cos(rad) * point.x - std::sin(rad) * point.y;
-	point.y =  std::sin(rad) * point.x + std::cos(rad) * point.y;
-}
-
-void rotate2(vec3& point, float x=1, float y=2, float z=1) {
+void rotate(vec3& point, float x=1, float y=2, float z=1) {
     float rad;
     float temp_x, temp_y, temp_z;
 
@@ -54,6 +41,12 @@ void rotate2(vec3& point, float x=1, float y=2, float z=1) {
     point.y = temp_y;
 }
 
+void scale(vec3& point, float scaleFactor){
+    point.x *= scaleFactor;
+    point.y *= scaleFactor;
+    point.z *= scaleFactor;
+}
+
 
 void line(Screen& screen, float x1, float y1, float x2, float y2){
 	float dx = x2-x1;
@@ -70,21 +63,29 @@ void line(Screen& screen, float x1, float y1, float x2, float y2){
 	}
 }
 
+void createVertices(std::vector<vec3>& points, float size, float xc=640/2, float yc=480/2){
+	int d = (int)size/2;
+	points = {
+		{xc-d, yc+d, (float)d},
+		{xc+d, yc+d, (float)d},
+		{xc+d, yc-d, (float)d},
+		{xc-d, yc-d, (float)d},
+
+		{xc-d, yc+d, (float)-d},
+		{xc+d, yc+d, (float)-d},
+		{xc+d, yc-d, (float)-d},
+		{xc-d, yc-d, (float)-d},
+	};
+
+
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	Screen screen;
 
-	std::vector<vec3> points{
-		{100,100,100},
-		{200,100,100},
-		{200,200,100},
-		{100,200,100},
-
-		{100,100,200},
-		{200,100,200},
-		{200,200,200},
-		{100,200,200},
-	};
-
+	std::vector<vec3> points;
+	createVertices(points, 20);
+	
 	std::vector<connection> connections{
 		{0,1},{1,2},{2,3},{3,0},
 		{4,5},{5,6},{6,7},{7,4},
@@ -102,29 +103,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	c.y /= points.size();
 	c.z /= points.size();
 
+	bool paused = false;
 	while(true){
-		for(auto& p : points){
-			p.x -= c.x;
-			p.y -= c.y;
-			p.z -= c.z;
-			rotate(p, 0.04, 0.02, 0.08);
-			p.x += c.x;
-			p.y += c.y;
-			p.z += c.z;
-			screen.pixel(p.x, p.y);
-		}
+		if(!paused){
+			for(auto& p : points){
+				p.x -= c.x;
+				p.y -= c.y;
+				p.z -= c.z;
+				rotate(p, 0.04, 0.02, 0.08);
+				scale(p, 1.001f);
+				p.x += c.x;
+				p.y += c.y;
+				p.z += c.z;
+				screen.pixel(p.x, p.y);
+			}
 
-		for(auto& conn : connections){
-			line(screen,
-				points[conn.a].x,
-				points[conn.a].y,
-				points[conn.b].x,
-				points[conn.b].y);
-		}
+			for(auto& conn : connections){
+				line(screen,
+					points[conn.a].x,
+					points[conn.a].y,
+					points[conn.b].x,
+					points[conn.b].y);
+			}
 
-		screen.show();
-		screen.clear();
-		screen.input();
+			screen.show();
+			screen.clear();	
+		}
+		
+		screen.input(paused);
 		SDL_Delay(30);
 	}
 

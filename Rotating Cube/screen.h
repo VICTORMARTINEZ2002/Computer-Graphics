@@ -30,13 +30,17 @@ class Screen{
 
 	void clear(){points.clear();}
 
-	void input(){
+	int input(bool& pause){
 		while(SDL_PollEvent(&e)){
 			if(e.type==SDL_QUIT){
 				SDL_Quit();
 				exit(0);
 			}
+			if(e.type==SDL_KEYDOWN){
+				if(e.key.keysym.sym==SDLK_SPACE){pause=!pause;}
+			}
 		}
+		return pause;
 	}
 
 };
