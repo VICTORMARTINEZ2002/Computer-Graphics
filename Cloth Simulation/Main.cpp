@@ -1,7 +1,8 @@
 #include <iostream>
 #include <math.h>
-#include "Application.h"
 #include <windows.h>
+
+#include "Application.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
     Application app;
