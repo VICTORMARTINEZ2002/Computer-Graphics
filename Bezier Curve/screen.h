@@ -9,12 +9,13 @@ struct point{
 
 
 class Screen{
+public:
 	SDL_Event e;
 	SDL_Window* window;
 	SDL_Renderer* renderer;
 	std::vector<SDL_FPoint> points;
 
-	public:
+public:
 	Screen(){
 		SDL_Init(SDL_INIT_VIDEO);
 		SDL_CreateWindowAndRenderer(640*2, 480*2, 0, &window, &renderer);
@@ -23,10 +24,11 @@ class Screen{
 
 	void pixel(float x, float y){points.emplace_back(x,y);}
 
-	void show(){
-		SDL_SetRenderDrawColor(renderer,0,0,0,255);
-		SDL_RenderClear(renderer);
+	void cpixel(float x, float y){
+		SDL_RenderDrawPointF(renderer, x, y);
+	}
 
+	void show(){
 		SDL_SetRenderDrawColor(renderer, 255,255,255,255);
 		for(size_t i=0; i<points.size(); i++){
 			SDL_RenderDrawPointF(renderer, points[i].x, points[i].y);	
@@ -34,7 +36,11 @@ class Screen{
 		SDL_RenderPresent(renderer);
 	}
 
-	void clear(){points.clear();}
+	void clear(){
+		SDL_SetRenderDrawColor(renderer,0,0,0,255);
+		SDL_RenderClear(renderer);
+		points.clear();
+	}
 
 	int input(bool& pause){
 		while(SDL_PollEvent(&e)){
