@@ -57,16 +57,46 @@ void centroid(point& c, std::vector<point>& points){
 	c.z *= invSize;
 }
 
+void line(Screen& screen, float x1, float y1, float x2, float y2){
+	float dx = x2-x1;
+	float dy = y2-y1;
+
+	float length = std::sqrt(dx*dx + dy*dy);
+	float angle  = std::atan2(dy,dx);
+
+	for(int i=0; i<length; i++){
+		screen.pixel(
+			x1 + std::cos(angle)*i,
+			y1 + std::sin(angle)*i
+		);
+	}
+}
+
+bool intersectLines(float x1, float y1, float x2, float y2, // Line 1
+                    float x3, float y3, float x4, float y4, // Line 2
+                    float& ix, float& iy) {                // Intersection point
+    float denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (denom == 0) return false; // Lines are parallel or coincident
+
+    float t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+    float u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+        ix = x1 + t * (x2 - x1);
+        iy = y1 + t * (y2 - y1);
+        return true;
+    }
+    return false; // No intersection within the line segments
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	Screen screen;
 
 	point p0{100,100,0};
-	
 	point p1{400,400,0};
-
 	point p2{100,350,0};
 
-	float dt=0.0001;
+	float dt=0.01;
 	bool paused = false;
 	while(true){
 		
@@ -78,12 +108,74 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		screen.pixel(p0.x, p0.y);
 		screen.pixel(p1.x, p1.y);
 		screen.pixel(p2.x, p2.y);
+
+
+		// Curva
+		std::vector<point> points;
 		for(float t=0; t<=1; t+=dt){
 			point p;
 			p.x = (1-t)*((1-t)*p0.x + t*p1.x) + t*((1-t)*p1.x + t*p2.x);
 			p.y = (1-t)*((1-t)*p0.y + t*p1.y) + t*((1-t)*p1.y + t*p2.y);
+			points.push_back(p);
 			screen.pixel(p.x, p.y);
 		}
+
+		// Tangents
+        for (float t = 0; t <= 1; t += 5*dt) {
+            // Calculate the point on the curve at parameter t
+            float curve_x = (1 - t) * ((1 - t) * p0.x + t * p1.x) + t * ((1 - t) * p1.x + t * p2.x);
+            float curve_y = (1 - t) * ((1 - t) * p0.y + t * p1.y) + t * ((1 - t) * p1.y + t * p2.y);
+
+            // Calculate the tangent vector at parameter t
+            float tangent_x = 2 * (1 - t) * (p1.x - p0.x) + 2 * t * (p2.x - p1.x);
+            float tangent_y = 2 * (1 - t) * (p1.y - p0.y) + 2 * t * (p2.y - p1.y);
+
+            // Normalize the tangent vector (optional, for consistent length)
+            float length = std::sqrt(tangent_x * tangent_x + tangent_y * tangent_y);
+            if (length > 0) {
+                tangent_x /= length;
+                tangent_y /= length;
+            }
+
+            // Define the tangent line segment (extend it far enough to intersect)
+            float tangent_end_x1 = curve_x + tangent_x * 1000; // Extend tangent line
+            float tangent_end_y1 = curve_y + tangent_y * 1000;
+            // Find intersection with Line 1 (p0 to p1)
+            float ix1, iy1;
+            bool intersectsLine1 = intersectLines(curve_x, curve_y, tangent_end_x1, tangent_end_y1,
+                                                  p1.x, p1.y, p2.x, p2.y, ix1, iy1);
+
+            
+            float tangent_end_x2 = curve_x - tangent_x * 1000; // Extend tangent line
+            float tangent_end_y2 = curve_y - tangent_y * 1000;
+            float ix2, iy2;
+            bool intersectsLine2 = intersectLines(curve_x, curve_y, tangent_end_x2, tangent_end_y2,
+                                                 p0.x, p0.y, p1.x, p1.y, ix2, iy2);
+
+            // Draw the tangent line to the closest intersection
+            if (intersectsLine1 || intersectsLine2) {
+                if (intersectsLine1 && intersectsLine2) {
+                    // Choose the closest intersection
+                    float dist1 = std::hypot(ix1 - curve_x, iy1 - curve_y);
+                    float dist2 = std::hypot(ix2 - curve_x, iy2 - curve_y);
+                    //if (dist1 < dist2) {
+                        line(screen, curve_x, curve_y, ix1, iy1);
+                    //} else {
+                        line(screen, curve_x, curve_y, ix2, iy2);
+                    //}
+                } else if (intersectsLine1) {
+                    line(screen, curve_x, curve_y, ix1, iy1);
+                } else if (intersectsLine2) {
+                    line(screen, curve_x, curve_y, ix2, iy2);
+                }
+            }
+        }
+
+
+	
+
+		line(screen, p0.x, p0.y, p1.x, p1.y);
+		line(screen, p1.x, p1.y, p2.x, p2.y);
 
 
 		screen.show();	

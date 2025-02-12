@@ -6,9 +6,9 @@
 
 class Cloth{
 private:
-	Vec2 gravity = {0.0f, 981.0f};
+	Vec2 gravity = {300.0f, 981.0f};
 	float drag = 0.01f;
-	float elasticity = 10000.0f;
+	float elasticity = 10.0f;
 
 	std::vector<Point*> points;
 	std::vector<Stick*> sticks;
